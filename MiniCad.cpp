@@ -31,4 +31,8 @@ int main()
                 shape->draw();
             }
         }
+        else if (command == "exit") {
+            break;
+        }
+
 }
