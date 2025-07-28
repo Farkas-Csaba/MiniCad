@@ -1,0 +1,24 @@
+# Build output 
+*.exe 
+*.obj 
+*.pdb 
+*.ilk 
+*.log 
+# Visual Studio specific 
+.vs/ 
+*.user 
+*.suo 
+*.VC.db 
+*.VC.opendb 
+# Build directories 
+/Debug/ 
+/Release/ 
+/x64/ 
+# CMake (ha haszn ln d) 
+CMakeFiles/ 
+CMakeCache.txt 
+cmake_install.cmake 
+# Temp files 
+*.tmp 
+*.bak 
+*.cache 
