@@ -20,4 +20,10 @@ int main()
             shapes.push_back(std::make_shared<Point>(x, y));
             std::cout << "Point added.\n";
         }
+        else if (command == "addline") {
+            int x1, y1, x2, y2;
+            std::cin >> x1 >> y1 >> x2 >> y2;
+            shapes.push_back(std::make_shared<Line>(Point(x1, y1), Point(x2, y2)));
+            std::cout << "Line added.\n";
+        }
 }
