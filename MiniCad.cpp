@@ -34,5 +34,11 @@ int main()
         else if (command == "exit") {
             break;
         }
+        else {
+            std::cout << "Unknown command.\n";
+        }
+    }
+
+    return 0;
 
 }
