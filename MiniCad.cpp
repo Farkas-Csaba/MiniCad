@@ -26,4 +26,9 @@ int main()
             shapes.push_back(std::make_shared<Line>(Point(x1, y1), Point(x2, y2)));
             std::cout << "Line added.\n";
         }
+        else if (command == "draw") {
+            for (const auto& shape : shapes) {
+                shape->draw();
+            }
+        }
 }
