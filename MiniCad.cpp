@@ -9,6 +9,7 @@
 int main() {
     std::vector<std::shared_ptr<Shape>> shapes;
     std::mutex shapeMutex;
+    std::vector<sf::Vector2i> clickPoints; // store two clicks for line drawing
 
     // Launch SFML window in a separate thread
     std::thread renderThread([&]() {
@@ -20,15 +21,26 @@ int main() {
                 if (event.type == sf::Event::Closed)
                     window.close();
 
-                // Mouse click to add point
                 if (event.type == sf::Event::MouseButtonPressed &&
                     event.mouseButton.button == sf::Mouse::Left) {
                     int mx = event.mouseButton.x;
                     int my = event.mouseButton.y;
+                    sf::Vector2i click(mx, my);
 
                     std::lock_guard<std::mutex> lock(shapeMutex);
-                    shapes.push_back(std::make_shared<Point>(mx, my));
-                    std::cout << "Point added at (" << mx << ", " << my << ") from mouse click.\n";
+                    clickPoints.push_back(click);
+
+                    if (clickPoints.size() == 1) {
+                        shapes.push_back(std::make_shared<Point>(mx, my));
+                        std::cout << "Point added at (" << mx << ", " << my << ") from mouse click.\n";
+                    }
+                    else if (clickPoints.size() == 2) {
+                        sf::Vector2i p1 = clickPoints[0];
+                        sf::Vector2i p2 = clickPoints[1];
+                        shapes.push_back(std::make_shared<Line>(Point(p1.x, p1.y), Point(p2.x, p2.y)));
+                        std::cout << "Line added from (" << p1.x << ", " << p1.y << ") to (" << p2.x << ", " << p2.y << ").\n";
+                        clickPoints.clear();
+                    }
                 }
             }
 
