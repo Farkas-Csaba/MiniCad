@@ -2,9 +2,10 @@
 #include <vector>
 #include <memory>
 #include "Shape.h"
-
+#include "SFML/Graphics.hpp"
 int main()
 {
+
     std::vector<std::shared_ptr<Shape>> shapes;
 
     while (true) {
@@ -27,8 +28,38 @@ int main()
             std::cout << "Line added.\n";
         }
         else if (command == "draw") {
-            for (const auto& shape : shapes) {
-                shape->draw();
+            sf::RenderWindow window(sf::VideoMode(800, 600), "MiniCAD Viewer");
+
+            while (window.isOpen()) {
+                sf::Event event;
+                while (window.pollEvent(event)) {
+                    if (event.type == sf::Event::Closed)
+                        window.close();
+                }
+
+                window.clear(sf::Color::White);
+
+                // Draw shapes
+                for (const auto& shape : shapes) {
+                    // Draw Points as small circles
+                    if (auto p = std::dynamic_pointer_cast<Point>(shape)) {
+                        sf::CircleShape circle(3.f); // radius 3 pixels
+                        circle.setPosition(static_cast<float>(p->x), static_cast<float>(p->y));
+                        circle.setFillColor(sf::Color::Black);
+                        window.draw(circle);
+                    }
+
+                    // Draw Lines as lines
+                    else if (auto l = std::dynamic_pointer_cast<Line>(shape)) {
+                        sf::Vertex line[] = {
+                            sf::Vertex(sf::Vector2f(static_cast<float>(l->start.x), static_cast<float>(l->start.y)), sf::Color::Blue),
+                            sf::Vertex(sf::Vector2f(static_cast<float>(l->end.x), static_cast<float>(l->end.y)), sf::Color::Blue)
+                        };
+                        window.draw(line, 2, sf::Lines);
+                    }
+                }
+
+                window.display();
             }
         }
         else if (command == "exit") {
