@@ -9,7 +9,10 @@
 int main() {
     std::vector<std::shared_ptr<Shape>> shapes;
     std::mutex shapeMutex;
-    std::vector<sf::Vector2i> clickPoints; // store two clicks for line drawing
+
+    // State for live line preview
+    bool isDrawingLine = false;
+    sf::Vector2f lineStartPoint;
 
     // Launch SFML window in a separate thread
     std::thread renderThread([&]() {
@@ -21,25 +24,28 @@ int main() {
                 if (event.type == sf::Event::Closed)
                     window.close();
 
+                // Mouse click to add point or line
                 if (event.type == sf::Event::MouseButtonPressed &&
                     event.mouseButton.button == sf::Mouse::Left) {
-                    int mx = event.mouseButton.x;
-                    int my = event.mouseButton.y;
-                    sf::Vector2i click(mx, my);
+                    sf::Vector2f clickPos(static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y));
 
                     std::lock_guard<std::mutex> lock(shapeMutex);
-                    clickPoints.push_back(click);
 
-                    if (clickPoints.size() == 1) {
-                        shapes.push_back(std::make_shared<Point>(mx, my));
-                        std::cout << "Point added at (" << mx << ", " << my << ") from mouse click.\n";
+                    if (!isDrawingLine) {
+                        // Start new line
+                        lineStartPoint = clickPos;
+                        isDrawingLine = true;
+                        std::cout << "Line start point at (" << lineStartPoint.x << ", " << lineStartPoint.y << ")\n";
                     }
-                    else if (clickPoints.size() == 2) {
-                        sf::Vector2i p1 = clickPoints[0];
-                        sf::Vector2i p2 = clickPoints[1];
-                        shapes.push_back(std::make_shared<Line>(Point(p1.x, p1.y), Point(p2.x, p2.y)));
-                        std::cout << "Line added from (" << p1.x << ", " << p1.y << ") to (" << p2.x << ", " << p2.y << ").\n";
-                        clickPoints.clear();
+                    else {
+                        // Finish line
+                        shapes.push_back(std::make_shared<Line>(
+                            Point(static_cast<int>(lineStartPoint.x), static_cast<int>(lineStartPoint.y)),
+                            Point(static_cast<int>(clickPos.x), static_cast<int>(clickPos.y))
+                        ));
+                        std::cout << "Line completed from (" << lineStartPoint.x << ", " << lineStartPoint.y << ") to ("
+                            << clickPos.x << ", " << clickPos.y << ")\n";
+                        isDrawingLine = false;
                     }
                 }
             }
@@ -63,6 +69,16 @@ int main() {
                         window.draw(line, 2, sf::Lines);
                     }
                 }
+            }
+
+            // Draw live preview line if drawing
+            if (isDrawingLine) {
+                sf::Vector2i mousePos = sf::Mouse::getPosition(window);
+                sf::Vertex tempLine[] = {
+                    sf::Vertex(lineStartPoint, sf::Color::Red),
+                    sf::Vertex(sf::Vector2f(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y)), sf::Color::Red)
+                };
+                window.draw(tempLine, 2, sf::Lines);
             }
 
             window.display();
