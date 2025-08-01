@@ -1,11 +1,11 @@
 # MiniCAD
 
-A lightweight 2D CAD prototype written in C++ using SFML. Allows you to create points and lines with live preview and multithreaded rendering.
+A lightweight 2D CAD prototype written in C++ using SFML. Allows you to basic shapes with live preview and multithreaded rendering.
 
 ## Features
 
-- Add points and lines with mouse clicks
-- Live preview of lines before committing
+- Add points, lines, rectangles, circles with mouse clicks
+- Live preview of shapes committing
 - Command-line shape input
 - Uses SFML for graphics
 - Multithreaded architecture (render + input separated)
