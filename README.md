@@ -1,6 +1,6 @@
 # MiniCAD
 
-A lightweight 2D CAD prototype written in C++ using SFML. Allows you to basic shapes with live preview and multithreaded rendering.
+A lightweight 2D CAD prototype written in C++ using SFML. Allows you to basic shapes with live preview and multithreaded rendering.(in early stages of development)
 
 ## Features
 
