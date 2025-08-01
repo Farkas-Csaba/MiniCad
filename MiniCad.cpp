@@ -18,6 +18,18 @@ int main() {
     std::thread renderThread([&]() {
         sf::RenderWindow window(sf::VideoMode(800, 600), "MiniCAD Viewer");
 
+        sf::Font font;
+        if (!font.loadFromFile("OpenSans-Regular.ttf")) {
+            std::cerr << "Could not load font\n";
+            return;
+        }
+
+        sf::Text hintText;
+        hintText.setFont(font);
+        hintText.setCharacterSize(16);
+        hintText.setFillColor(sf::Color::Black);
+        hintText.setPosition(10.f, 10.f);
+
         while (window.isOpen()) {
             sf::Event event;
             while (window.pollEvent(event)) {
@@ -80,7 +92,8 @@ int main() {
                 };
                 window.draw(tempLine, 2, sf::Lines);
             }
-
+            hintText.setString(isDrawingLine ? "Click to finish the line" : "Click to start drawing a line");
+            window.draw(hintText);
             window.display();
         }
         });
