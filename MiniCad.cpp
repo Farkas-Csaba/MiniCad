@@ -11,12 +11,11 @@ int main() {
     std::vector<std::shared_ptr<Shape>> shapes;
     std::mutex shapeMutex;
 
-    // State for live line preview
-    bool isDrawingLine = false;
-    sf::Vector2f lineStartPoint;
+    // State for live shape preview
+    bool isDrawing = false;
+    sf::Vector2f startPoint;
     ShapeType selectedShapeType = ShapeType::None;
 
-    // Launch SFML window in a separate thread
     std::thread renderThread([&]() {
         sf::RenderWindow window(sf::VideoMode(800, 600), "MiniCAD Viewer");
 
@@ -37,30 +36,34 @@ int main() {
             while (window.pollEvent(event)) {
                 if (event.type == sf::Event::Closed)
                     window.close();
+
                 if (event.type == sf::Event::KeyPressed) {
                     switch (event.key.code) {
                     case sf::Keyboard::Num1:
                         selectedShapeType = ShapeType::Point;
                         std::cout << "Mode: Point\n";
+                        isDrawing = false;
                         break;
                     case sf::Keyboard::Num2:
                         selectedShapeType = ShapeType::Line;
                         std::cout << "Mode: Line\n";
+                        isDrawing = false;
                         break;
                     case sf::Keyboard::Num3:
                         selectedShapeType = ShapeType::Rectangle;
-                        std::cout << "Mode: Rectangle (not implemented yet)\n";
+                        std::cout << "Mode: Rectangle\n";
+                        isDrawing = false;
                         break;
                     case sf::Keyboard::Num4:
                         selectedShapeType = ShapeType::Circle;
-                        std::cout << "Mode: Circle (not implemented yet)\n";
+                        std::cout << "Mode: Circle\n";
+                        isDrawing = false;
                         break;
                     default:
                         break;
                     }
                 }
 
-                //Mouse click
                 if (event.type == sf::Event::MouseButtonPressed &&
                     event.mouseButton.button == sf::Mouse::Left) {
                     sf::Vector2f clickPos(static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y));
@@ -71,18 +74,49 @@ int main() {
                         std::cout << "Point added at (" << clickPos.x << ", " << clickPos.y << ")\n";
                     }
                     else if (selectedShapeType == ShapeType::Line) {
-                        if (!isDrawingLine) {
-                            lineStartPoint = clickPos;
-                            isDrawingLine = true;
-                            std::cout << "Line start point at (" << lineStartPoint.x << ", " << lineStartPoint.y << ")\n";
+                        if (!isDrawing) {
+                            startPoint = clickPos;
+                            isDrawing = true;
+                            std::cout << "Line start point at (" << startPoint.x << ", " << startPoint.y << ")\n";
                         }
                         else {
                             shapes.push_back(std::make_shared<Line>(
-                                Point(static_cast<int>(lineStartPoint.x), static_cast<int>(lineStartPoint.y)),
+                                Point(static_cast<int>(startPoint.x), static_cast<int>(startPoint.y)),
                                 Point(static_cast<int>(clickPos.x), static_cast<int>(clickPos.y))
                             ));
                             std::cout << "Line completed to (" << clickPos.x << ", " << clickPos.y << ")\n";
-                            isDrawingLine = false;
+                            isDrawing = false;
+                        }
+                    }
+                    else if (selectedShapeType == ShapeType::Rectangle) {
+                        if (!isDrawing) {
+                            startPoint = clickPos;
+                            isDrawing = true;
+                            std::cout << "Rectangle start point at (" << startPoint.x << ", " << startPoint.y << ")\n";
+                        }
+                        else {
+                            int left = static_cast<int>(std::min(startPoint.x, clickPos.x));
+                            int top = static_cast<int>(std::min(startPoint.y, clickPos.y));
+                            int width = static_cast<int>(std::abs(clickPos.x - startPoint.x));
+                            int height = static_cast<int>(std::abs(clickPos.y - startPoint.y));
+                            shapes.push_back(std::make_shared<Rectangle>(Point(left, top), width, height));
+                            std::cout << "Rectangle completed at (" << left << ", " << top << ") size (" << width << ", " << height << ")\n";
+                            isDrawing = false;
+                        }
+                    }
+                    else if (selectedShapeType == ShapeType::Circle) {
+                        if (!isDrawing) {
+                            startPoint = clickPos;
+                            isDrawing = true;
+                            std::cout << "Circle center at (" << startPoint.x << ", " << startPoint.y << ")\n";
+                        }
+                        else {
+                            float dx = clickPos.x - startPoint.x;
+                            float dy = clickPos.y - startPoint.y;
+                            int radius = static_cast<int>(std::sqrt(dx * dx + dy * dy));
+                            shapes.push_back(std::make_shared<Circle>(Point(static_cast<int>(startPoint.x), static_cast<int>(startPoint.y)), radius));
+                            std::cout << "Circle completed with radius " << radius << "\n";
+                            isDrawing = false;
                         }
                     }
                 }
@@ -95,7 +129,7 @@ int main() {
                 for (const auto& shape : shapes) {
                     if (auto p = std::dynamic_pointer_cast<Point>(shape)) {
                         sf::CircleShape circle(3.f);
-                        circle.setPosition(static_cast<float>(p->x), static_cast<float>(p->y));
+                        circle.setPosition(static_cast<float>(p->x) - 3.f, static_cast<float>(p->y) - 3.f); // center circle on point
                         circle.setFillColor(sf::Color::Black);
                         window.draw(circle);
                     }
@@ -106,26 +140,75 @@ int main() {
                         };
                         window.draw(line, 2, sf::Lines);
                     }
+                    else if (auto r = std::dynamic_pointer_cast<Rectangle>(shape)) {
+                        sf::RectangleShape rectShape(sf::Vector2f(static_cast<float>(r->width), static_cast<float>(r->height)));
+                        rectShape.setPosition(static_cast<float>(r->topLeft.x), static_cast<float>(r->topLeft.y));
+                        rectShape.setFillColor(sf::Color::Transparent);
+                        rectShape.setOutlineColor(sf::Color::Green);
+                        rectShape.setOutlineThickness(2.f);
+                        window.draw(rectShape);
+                    }
+                    else if (auto c = std::dynamic_pointer_cast<Circle>(shape)) {
+                        sf::CircleShape circleShape(static_cast<float>(c->radius));
+                        circleShape.setPosition(static_cast<float>(c->center.x) - static_cast<float>(c->radius),
+                            static_cast<float>(c->center.y) - static_cast<float>(c->radius));
+                        circleShape.setFillColor(sf::Color::Transparent);
+                        circleShape.setOutlineColor(sf::Color::Magenta);
+                        circleShape.setOutlineThickness(2.f);
+                        window.draw(circleShape);
+                    }
                 }
             }
 
-            // Draw live preview line if drawing
-            if (isDrawingLine) {
+            // Draw live preview for shapes with two points
+            if (isDrawing) {
                 sf::Vector2i mousePos = sf::Mouse::getPosition(window);
-                sf::Vertex tempLine[] = {
-                    sf::Vertex(lineStartPoint, sf::Color::Red),
-                    sf::Vertex(sf::Vector2f(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y)), sf::Color::Red)
-                };
-                window.draw(tempLine, 2, sf::Lines);
+                sf::Vector2f currentPos(static_cast<float>(mousePos.x), static_cast<float>(mousePos.y));
+
+                if (selectedShapeType == ShapeType::Line) {
+                    sf::Vertex tempLine[] = {
+                        sf::Vertex(startPoint, sf::Color::Red),
+                        sf::Vertex(currentPos, sf::Color::Red)
+                    };
+                    window.draw(tempLine, 2, sf::Lines);
+                }
+                else if (selectedShapeType == ShapeType::Rectangle) {
+                    float left = std::min(startPoint.x, currentPos.x);
+                    float top = std::min(startPoint.y, currentPos.y);
+                    float width = std::abs(currentPos.x - startPoint.x);
+                    float height = std::abs(currentPos.y - startPoint.y);
+
+                    sf::RectangleShape rectShape(sf::Vector2f(width, height));
+                    rectShape.setPosition(left, top);
+                    rectShape.setFillColor(sf::Color::Transparent);
+                    rectShape.setOutlineColor(sf::Color::Red);
+                    rectShape.setOutlineThickness(1.f);
+                    window.draw(rectShape);
+                }
+                else if (selectedShapeType == ShapeType::Circle) {
+                    float dx = currentPos.x - startPoint.x;
+                    float dy = currentPos.y - startPoint.y;
+                    float radius = std::sqrt(dx * dx + dy * dy);
+
+                    sf::CircleShape circleShape(radius);
+                    circleShape.setPosition(startPoint.x - radius, startPoint.y - radius);
+                    circleShape.setFillColor(sf::Color::Transparent);
+                    circleShape.setOutlineColor(sf::Color::Red);
+                    circleShape.setOutlineThickness(1.f);
+                    window.draw(circleShape);
+                }
             }
+
             if (selectedShapeType == ShapeType::None)
                 hintText.setString("Press 1: Point | 2: Line | 3: Rect | 4: Circle");
             else if (selectedShapeType == ShapeType::Point)
                 hintText.setString("Click to place a point (1-4 to change shape)");
             else if (selectedShapeType == ShapeType::Line)
-                hintText.setString(isDrawingLine ? "Click to finish the line" : "Click to start a line");
-            else
-                hintText.setString("Shape not implemented yet");
+                hintText.setString(isDrawing ? "Click to finish the line" : "Click to start a line");
+            else if (selectedShapeType == ShapeType::Rectangle)
+                hintText.setString(isDrawing ? "Click to finish the rectangle" : "Click to start a rectangle");
+            else if (selectedShapeType == ShapeType::Circle)
+                hintText.setString(isDrawing ? "Click to finish the circle" : "Click to start a circle");
 
             window.draw(hintText);
             window.display();
@@ -162,7 +245,6 @@ int main() {
         }
     }
 
-    
     renderThread.join();
 
     return 0;
