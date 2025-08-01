@@ -5,6 +5,7 @@
 #include <mutex>
 #include "Shape.h"
 #include "SFML/Graphics.hpp"
+#include "ShapeType.h"
 
 int main() {
     std::vector<std::shared_ptr<Shape>> shapes;
@@ -13,6 +14,7 @@ int main() {
     // State for live line preview
     bool isDrawingLine = false;
     sf::Vector2f lineStartPoint;
+    ShapeType selectedShapeType = ShapeType::None;
 
     // Launch SFML window in a separate thread
     std::thread renderThread([&]() {
@@ -35,29 +37,53 @@ int main() {
             while (window.pollEvent(event)) {
                 if (event.type == sf::Event::Closed)
                     window.close();
+                if (event.type == sf::Event::KeyPressed) {
+                    switch (event.key.code) {
+                    case sf::Keyboard::Num1:
+                        selectedShapeType = ShapeType::Point;
+                        std::cout << "Mode: Point\n";
+                        break;
+                    case sf::Keyboard::Num2:
+                        selectedShapeType = ShapeType::Line;
+                        std::cout << "Mode: Line\n";
+                        break;
+                    case sf::Keyboard::Num3:
+                        selectedShapeType = ShapeType::Rectangle;
+                        std::cout << "Mode: Rectangle (not implemented yet)\n";
+                        break;
+                    case sf::Keyboard::Num4:
+                        selectedShapeType = ShapeType::Circle;
+                        std::cout << "Mode: Circle (not implemented yet)\n";
+                        break;
+                    default:
+                        break;
+                    }
+                }
 
-                // Mouse click to add point or line
+                //Mouse click
                 if (event.type == sf::Event::MouseButtonPressed &&
                     event.mouseButton.button == sf::Mouse::Left) {
                     sf::Vector2f clickPos(static_cast<float>(event.mouseButton.x), static_cast<float>(event.mouseButton.y));
-
                     std::lock_guard<std::mutex> lock(shapeMutex);
 
-                    if (!isDrawingLine) {
-                        // Start new line
-                        lineStartPoint = clickPos;
-                        isDrawingLine = true;
-                        std::cout << "Line start point at (" << lineStartPoint.x << ", " << lineStartPoint.y << ")\n";
+                    if (selectedShapeType == ShapeType::Point) {
+                        shapes.push_back(std::make_shared<Point>(static_cast<int>(clickPos.x), static_cast<int>(clickPos.y)));
+                        std::cout << "Point added at (" << clickPos.x << ", " << clickPos.y << ")\n";
                     }
-                    else {
-                        // Finish line
-                        shapes.push_back(std::make_shared<Line>(
-                            Point(static_cast<int>(lineStartPoint.x), static_cast<int>(lineStartPoint.y)),
-                            Point(static_cast<int>(clickPos.x), static_cast<int>(clickPos.y))
-                        ));
-                        std::cout << "Line completed from (" << lineStartPoint.x << ", " << lineStartPoint.y << ") to ("
-                            << clickPos.x << ", " << clickPos.y << ")\n";
-                        isDrawingLine = false;
+                    else if (selectedShapeType == ShapeType::Line) {
+                        if (!isDrawingLine) {
+                            lineStartPoint = clickPos;
+                            isDrawingLine = true;
+                            std::cout << "Line start point at (" << lineStartPoint.x << ", " << lineStartPoint.y << ")\n";
+                        }
+                        else {
+                            shapes.push_back(std::make_shared<Line>(
+                                Point(static_cast<int>(lineStartPoint.x), static_cast<int>(lineStartPoint.y)),
+                                Point(static_cast<int>(clickPos.x), static_cast<int>(clickPos.y))
+                            ));
+                            std::cout << "Line completed to (" << clickPos.x << ", " << clickPos.y << ")\n";
+                            isDrawingLine = false;
+                        }
                     }
                 }
             }
@@ -92,7 +118,15 @@ int main() {
                 };
                 window.draw(tempLine, 2, sf::Lines);
             }
-            hintText.setString(isDrawingLine ? "Click to finish the line" : "Click to start drawing a line");
+            if (selectedShapeType == ShapeType::None)
+                hintText.setString("Press 1: Point | 2: Line | 3: Rect | 4: Circle");
+            else if (selectedShapeType == ShapeType::Point)
+                hintText.setString("Click to place a point (1-4 to change shape)");
+            else if (selectedShapeType == ShapeType::Line)
+                hintText.setString(isDrawingLine ? "Click to finish the line" : "Click to start a line");
+            else
+                hintText.setString("Shape not implemented yet");
+
             window.draw(hintText);
             window.display();
         }
@@ -128,7 +162,7 @@ int main() {
         }
     }
 
-    // Wait for window thread to exit
+    
     renderThread.join();
 
     return 0;
